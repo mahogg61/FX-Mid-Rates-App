@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4</title>
+<title>Mid FX v4.1.1</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -39,7 +39,10 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 .period{border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 10px;border-radius:9px;font-weight:700}
 .period.active{outline:2px solid var(--text)}
 .chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
-#fxChart{width:100%;height:340px;display:block;touch-action:none}
+#fxChart{width:100%;height:300px;display:block;touch-action:none}
+.rsi-head{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 4px;font-size:12px;color:var(--muted)}
+.rsi-value{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+#rsiChart{width:100%;height:135px;display:block;touch-action:none;border-top:1px solid var(--line);margin-top:4px}
 .chart-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
 .chart-stats{display:flex;gap:16px;flex-wrap:wrap;margin:10px 2px}
 .chart-stat span{display:block;color:var(--muted);font-size:11px}.chart-stat b{font-variant-numeric:tabular-nums}
@@ -98,7 +101,12 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
       <div class="chart-stat"><span>Latest</span><b id="chartLatest">—</b></div>
     </div>
     <div class="chart-card">
-      <svg id="fxChart" viewBox="0 0 720 340" preserveAspectRatio="none"></svg>
+      <svg id="fxChart" viewBox="0 0 720 300" preserveAspectRatio="none"></svg>
+      <div class="rsi-head">
+        <span>RSI(14)</span>
+        <span class="rsi-value" id="rsiCurrent">—</span>
+      </div>
+      <svg id="rsiChart" viewBox="0 0 720 135" preserveAspectRatio="none"></svg>
       <div class="chart-message" id="chartMessage" style="display:none"></div>
       <div class="chart-meta">
         <span id="chartSource"></span>
@@ -350,6 +358,87 @@ function chartFmt(x){
   const d=Number(decSel.value);
   return x.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 }
+
+function calcRSI(points,period=14){
+  if(!Array.isArray(points) || points.length<period+1) return [];
+  const out=[];
+  let gain=0,loss=0;
+
+  for(let i=1;i<=period;i++){
+    const ch=points[i].v-points[i-1].v;
+    if(ch>0) gain+=ch;
+    else loss-=ch;
+  }
+
+  let avgGain=gain/period, avgLoss=loss/period;
+  let rs=avgLoss===0 ? Infinity : avgGain/avgLoss;
+  out.push({t:points[period].t,v:avgLoss===0?100:100-(100/(1+rs))});
+
+  for(let i=period+1;i<points.length;i++){
+    const ch=points[i].v-points[i-1].v;
+    const g=ch>0?ch:0, l=ch<0?-ch:0;
+    avgGain=((avgGain*(period-1))+g)/period;
+    avgLoss=((avgLoss*(period-1))+l)/period;
+    rs=avgLoss===0 ? Infinity : avgGain/avgLoss;
+    out.push({t:points[i].t,v:avgLoss===0?100:100-(100/(1+rs))});
+  }
+  return out;
+}
+
+function renderRSI(){
+  const svg=document.getElementById("rsiChart");
+  const current=document.getElementById("rsiCurrent");
+  svg.innerHTML="";
+
+  const rsi=calcRSI(chartData,14);
+  if(rsi.length<2){
+    current.textContent="—";
+    const tx=svgEl("text",{x:360,y:70,"text-anchor":"middle",fill:"currentColor","fill-opacity":".55","font-size":"12"});
+    tx.textContent="Not enough observations for RSI(14)";
+    svg.appendChild(tx);
+    return;
+  }
+
+  current.textContent=rsi[rsi.length-1].v.toFixed(1);
+
+  const W=720,H=135,pad={l:58,r:18,t:8,b:22};
+  const xmin=chartData[0].t, xmax=chartData[chartData.length-1].t;
+  const X=t=>pad.l+(t-xmin)/(xmax-xmin)*(W-pad.l-pad.r);
+  const Y=v=>pad.t+(100-v)/100*(H-pad.t-pad.b);
+
+  [70,50,30].forEach(level=>{
+    const y=Y(level);
+    svg.appendChild(svgEl("line",{
+      x1:pad.l,x2:W-pad.r,y1:y,y2:y,
+      stroke:"currentColor",
+      "stroke-opacity":level===50?".16":".28",
+      "stroke-width":"1",
+      "stroke-dasharray":level===50?"3 4":"5 4",
+      "vector-effect":"non-scaling-stroke"
+    }));
+    const tx=svgEl("text",{x:pad.l-7,y:y+4,"text-anchor":"end",fill:"currentColor","fill-opacity":".65","font-size":"11"});
+    tx.textContent=String(level);
+    svg.appendChild(tx);
+  });
+
+  // Overbought / oversold labels
+  const top=svgEl("text",{x:W-pad.r,y:Y(70)-4,"text-anchor":"end",fill:"currentColor","fill-opacity":".55","font-size":"10"});
+  top.textContent="Overbought";
+  svg.appendChild(top);
+
+  const bot=svgEl("text",{x:W-pad.r,y:Y(30)+12,"text-anchor":"end",fill:"currentColor","fill-opacity":".55","font-size":"10"});
+  bot.textContent="Oversold";
+  svg.appendChild(bot);
+
+  const pts=rsi.map(p=>`${X(p.t)},${Y(p.v)}`).join(" ");
+  svg.appendChild(svgEl("polyline",{
+    points:pts,
+    fill:"none",
+    stroke:"currentColor",
+    "stroke-width":"1.8",
+    "vector-effect":"non-scaling-stroke"
+  }));
+}
 function renderChart(){
   const svg=document.getElementById("fxChart"),msg=document.getElementById("chartMessage");
   svg.innerHTML="";
@@ -358,6 +447,7 @@ function renderChart(){
     msg.textContent=activeChartPeriod==="1D"
       ?"1D builds from the same live mid-rate feed while this app is used. More points will appear as the app refreshes."
       :"No historical data returned for this period.";
+    renderRSI();
     return;
   }
   svg.style.display="block";msg.style.display="none";
@@ -378,7 +468,7 @@ function renderChart(){
     tx.textContent=chartFmt(val);svg.appendChild(tx);
   }
   const pts=chartData.map(p=>`${X(p.t)},${Y(p.v)}`).join(" ");
-  svg.appendChild(svgEl("polyline",{points:pts,fill:"none",stroke:"currentColor","stroke-width":"2.2","vector-effect":"non-scaling-stroke"}));
+  svg.appendChild(svgEl("polyline",{points:pts,fill:"none",stroke:"currentColor","stroke-width":"1.3","vector-effect":"non-scaling-stroke"}));
 
   const cross=svgEl("line",{id:"crosshair",y1:pad.t,y2:H-pad.b,stroke:"currentColor","stroke-opacity":".35","stroke-width":"1","vector-effect":"non-scaling-stroke"});
   cross.style.display="none";svg.appendChild(cross);
@@ -402,6 +492,7 @@ function renderChart(){
   document.getElementById("chartLatest").textContent=chartFmt(vals[vals.length-1]);
   const ch=vals[vals.length-1]-vals[0],pct=vals[0]?ch/vals[0]*100:0;
   document.getElementById("chartChange").textContent=`${ch>=0?"+":""}${chartFmt(ch)} · ${pct>=0?"+":""}${pct.toFixed(2)}%`;
+  renderRSI();
 }
 async function loadChart(period){
   activeChartPeriod=period;
