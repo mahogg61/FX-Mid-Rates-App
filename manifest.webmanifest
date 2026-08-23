@@ -1,9 +1,9 @@
 {
-  "name": "USD Mid FX",
+  "name": "Mid FX",
   "short_name": "Mid FX",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#111827",
-  "description": "Ad-free market-practice FX quotes with selectable reference currency and inverse rates."
+  "description": "Market-practice FX quotes with selectable reference currency and inverse rates."
 }

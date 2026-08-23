@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>USD Mid FX</title>
+<title>Mid FX v3.1</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -81,7 +81,15 @@ function populateBase(){
   });
 }
 
-function fmt(x){const d=+decSel.value;if(!Number.isFinite(x))return "—";if(x>=1000)return x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});if(x>=100)return x.toFixed(Math.min(d,3));if(x>=10)return x.toFixed(Math.min(d,4));return x.toFixed(d)}
+function fmt(x){
+  const d=Number(decSel.value);
+  if(!Number.isFinite(x)) return "—";
+  return x.toLocaleString(undefined,{
+    minimumFractionDigits:d,
+    maximumFractionDigits:d,
+    useGrouping:x>=1000
+  });
+}
 function saveOrder(){localStorage.setItem("fx-order",JSON.stringify(order))}
 
 function usdRate(code){
@@ -118,7 +126,11 @@ function render(){
   document.getElementById("primaryHead").textContent="Market quote";
   document.getElementById("inverseHead").textContent="Inverse";
 
-  order.filter(code=>code!==referenceCurrency).forEach(code=>{
+  const displayCodes = referenceCurrency==="USD"
+    ? order.filter(code=>code!==referenceCurrency)
+    : ["USD", ...order.filter(code=>code!==referenceCurrency && code!=="USD")];
+
+  displayCodes.forEach(code=>{
     const pair=orientPair(referenceCurrency,code);
     const primary=crossRate(pair.base,pair.quote);
     const inverse=Number.isFinite(primary)&&primary!==0 ? 1/primary : NaN;
@@ -202,9 +214,11 @@ decSel.addEventListener("change",()=>{localStorage.setItem("fx-decimals",decSel.
 intervalSel.addEventListener("change",()=>{localStorage.setItem("fx-refresh-interval",intervalSel.value);scheduleAutoRefresh()});
 document.getElementById("refreshBtn").addEventListener("click",async()=>{await refresh();scheduleAutoRefresh()});
 document.getElementById("resetBtn").addEventListener("click",()=>{order=DEFAULT.slice();saveOrder();render();populateAdd()});
-document.getElementById("addBtn").addEventListener("click",()=>{const c=document.getElementById("addCurrency").value;if(c&&!order.includes(c)){order.push(c);saveOrder();populateBase();render();populateAdd();refresh().then(scheduleAutoRefresh)}});
+document.getElementById("addBtn").addEventListener("click",()=>{const c=document.getElementById("addCurrency").value;if(c&&!order.includes(c)){order.push(c);saveOrder();render();populateAdd();refresh().then(scheduleAutoRefresh)}});
 
-render();populateAdd();
+populateBase();
+render();
+populateAdd();
 const old=localStorage.getItem("fx-updated");if(Object.keys(rates).length&&old)status("Cached — refreshing","warn",`Last fetch ${new Date(old).toLocaleString()}`,fxMarketText());
 refresh().then(scheduleAutoRefresh);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refresh().then(scheduleAutoRefresh)});
