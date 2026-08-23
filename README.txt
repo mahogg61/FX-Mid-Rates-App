@@ -1,8 +1,8 @@
-Mid FX v4.1.1
+Mid FX v4.1.2
 
 Change:
-- Price chart line reduced from 2.2 px to 1.3 px.
-- RSI and all other behaviour unchanged.
+- Fixes mobile chart scrolling so the full RSI panel is visible below the price chart.
+- Price chart, RSI calculation, line thickness and controls are unchanged.
 
 GitHub update:
 Replace index.html, manifest.webmanifest and sw.js and commit.

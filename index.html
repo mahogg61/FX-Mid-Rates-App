@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.1.1</title>
+<title>Mid FX v4.1.2</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -28,8 +28,13 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 .foot{font-size:12px;margin:12px 3px 0}
 @media(max-width:460px){.wrap{padding-left:8px;padding-right:8px}.row{grid-template-columns:28px 70px 1fr 1fr}.cell{padding:10px 5px}.code,.rate,.inv{font-size:15px}.name{display:none}}
 
-.chart-modal{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;overflow:auto}
+.chart-modal{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
 .chart-modal.open{display:block}
+@media(max-width:600px){
+  .chart-modal{position:absolute;inset:0 auto auto 0;width:100%;min-height:100%;overflow:visible}
+  .chart-modal.open{display:block}
+  .chart-wrap{padding-bottom:64px}
+}
 .chart-wrap{max-width:760px;margin:auto;padding:14px 12px 32px}
 .chart-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .chart-title{font-size:24px;font-weight:800}
@@ -524,7 +529,9 @@ function openChart(pair,current){
   document.getElementById("chartPair").textContent=`${pair.base}/${pair.quote}`;
   document.getElementById("chartCurrent").textContent=chartFmt(current);
   document.getElementById("chartModal").classList.add("open");
-  document.body.style.overflow="hidden";
+  if(window.matchMedia("(min-width:601px)").matches) document.body.style.overflow="hidden";
+  else document.body.style.overflow="";
+  window.scrollTo({top:0,behavior:"auto"});
   loadChart(activeChartPeriod);
 }
 function closeChart(){
