@@ -1,14 +1,26 @@
-USD Mid FX v2
+USD Mid FX v3
 
-Changes:
-- Removed the daily-cached HexaRate fallback.
-- Primary source is CurrencyExchangeTool, which states it fetches live mid-market rates from Yahoo Finance on every request.
-- Adds cache-busting and no-cache request headers.
-- Shows exact fetch time including seconds.
-- States whether any rate actually changed on the last refresh.
-- Shows weekend/market status.
-- Any fallback is explicitly labelled central-bank/reference rather than live.
-- Service worker updated to network-first so new versions are less likely to remain stuck in cache.
+New in v3
+---------
+- Reference currency can be changed.
+- Cross-rates are calculated locally from the USD mid-rate set.
+- Pair orientation follows common market convention where defined.
+- Examples with USD:
+  GBP/USD  ("cable")
+  EUR/USD
+  AUD/USD
+  NZD/USD
+  USD/JPY
+  USD/CHF
+  USD/CAD
+  USD/THB
+  USD/SGD
+  USD/CNY
+  USD/HKD
+- Inverse remains visible in the right column.
+- The selected reference currency is remembered.
 
-GitHub update:
-Replace index.html, manifest.webmanifest and sw.js in the repository with these files, then commit.
+GitHub update
+-------------
+Replace index.html, manifest.webmanifest and sw.js in the repository with the
+v3 files and commit the changes.

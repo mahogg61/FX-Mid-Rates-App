@@ -31,9 +31,10 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>USD Mid FX</h1><div class="sub">1 USD · direct + inverse</div></div><button class="btn" id="refreshBtn">Refresh</button></header>
+<header><div><h1>USD Mid FX</h1><div class="sub">Market-practice FX quotes · direct + inverse</div></div><button class="btn" id="refreshBtn">Refresh</button></header>
 
 <div class="controls">
+<label class="control">Reference <select id="baseCurrency"></select></label>
 <label class="control">Decimals <select id="decimals"><option>4</option><option selected>5</option><option>6</option></select></label>
 <label class="control">Auto refresh <select id="refreshInterval"><option value="30">30 sec</option><option value="60" selected>1 min</option><option value="300">5 min</option><option value="0">Manual</option></select></label>
 <button class="btn" id="resetBtn">Reset order</button>
@@ -45,12 +46,12 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 </div>
 
 <div class="table">
-<div class="row head"><div class="cell"></div><div class="cell">Currency</div><div class="cell" style="text-align:right">1 USD =</div><div class="cell" style="text-align:right">1 unit = USD</div></div>
+<div class="row head"><div class="cell"></div><div class="cell">Pair</div><div class="cell" id="primaryHead" style="text-align:right">Market quote</div><div class="cell" id="inverseHead" style="text-align:right">Inverse</div></div>
 <div id="rows"></div>
 </div>
 
 <div class="addbox"><select id="addCurrency"></select><button class="btn" id="addBtn">Add</button></div>
-<div class="foot">Drag rows to reorder. On a phone, tap ≡ to move a row up. Your order, decimals and refresh interval are saved locally. Live rows use CurrencyExchangeTool, which states that it fetches mid-market rates from Yahoo Finance on each request. If that source fails, fallback rows are clearly labelled as central-bank/reference data.</div>
+<div class="foot">Choose a reference currency for cross-rate calculation. Pair orientation follows common market convention where defined — for example GBP/USD (“cable”), EUR/USD, AUD/USD and NZD/USD, but USD/JPY, USD/CHF, USD/CAD and USD/THB. Drag rows to reorder; on a phone, tap ≡ to move a row up. Settings are saved locally.</div>
 </div>
 
 <script>
@@ -63,12 +64,89 @@ let dragCode=null, autoTimer=null, countdownTimer=null, nextRefreshAt=null;
 const rows=document.getElementById("rows");
 const decSel=document.getElementById("decimals");
 const intervalSel=document.getElementById("refreshInterval");
+const baseSel=document.getElementById("baseCurrency");
 decSel.value=localStorage.getItem("fx-decimals")||"5";
 intervalSel.value=localStorage.getItem("fx-refresh-interval")||"60";
+let referenceCurrency=localStorage.getItem("fx-reference")||"USD";
+
+function populateBase(){
+  baseSel.innerHTML="";
+  const all=["USD",...Object.keys(CURRENCIES)];
+  [...new Set(all)].forEach(c=>{
+    const o=document.createElement("option");
+    o.value=c;
+    o.textContent=c+(CURRENCIES[c]?` — ${CURRENCIES[c]}`:" — US dollar");
+    if(c===referenceCurrency)o.selected=true;
+    baseSel.appendChild(o);
+  });
+}
 
 function fmt(x){const d=+decSel.value;if(!Number.isFinite(x))return "—";if(x>=1000)return x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});if(x>=100)return x.toFixed(Math.min(d,3));if(x>=10)return x.toFixed(Math.min(d,4));return x.toFixed(d)}
 function saveOrder(){localStorage.setItem("fx-order",JSON.stringify(order))}
-function render(){rows.innerHTML="";order.forEach(code=>{const r=rates[code],el=document.createElement("div");el.className="row";el.draggable=true;el.dataset.code=code;el.innerHTML=`<div class="cell drag">≡</div><div class="cell code">${code}<span class="name">${CURRENCIES[code]||""}</span></div><div class="cell rate">${fmt(r)}</div><div class="cell inv">${fmt(r?1/r:NaN)}</div>`;el.addEventListener("dragstart",()=>{dragCode=code;el.classList.add("dragging")});el.addEventListener("dragend",()=>{el.classList.remove("dragging");dragCode=null});el.addEventListener("dragover",e=>e.preventDefault());el.addEventListener("drop",e=>{e.preventDefault();if(!dragCode||dragCode===code)return;const a=order.indexOf(dragCode),b=order.indexOf(code);order.splice(a,1);order.splice(b,0,dragCode);saveOrder();render();populateAdd()});el.querySelector(".drag").addEventListener("click",()=>{const i=order.indexOf(code);if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];saveOrder();render()}});rows.appendChild(el)})}
+
+function usdRate(code){
+  if(code==="USD") return 1;
+  return Number(rates[code]);
+}
+function crossRate(from,to){
+  const f=usdRate(from), t=usdRate(to);
+  if(!Number.isFinite(f)||!Number.isFinite(t)||f<=0||t<=0) return NaN;
+  return t/f;
+}
+
+// Standard market orientation for USD pairs.
+// GBP/USD is "cable". EUR/USD, AUD/USD and NZD/USD also quote USD second.
+// Most other USD pairs quote USD first.
+const USD_QUOTE_SECOND = new Set(["GBP","EUR","AUD","NZD"]);
+function orientPair(a,b){
+  if(a===b) return {base:a,quote:b};
+  if(a==="USD" || b==="USD"){
+    const other=a==="USD"?b:a;
+    if(USD_QUOTE_SECOND.has(other)) return {base:other,quote:"USD"};
+    return {base:"USD",quote:other};
+  }
+
+  // Practical precedence for common crosses.
+  // Higher-ranked currency is normally quoted first for the pairs shown here.
+  const rank=["EUR","GBP","AUD","NZD","USD","CAD","CHF","SGD","HKD","CNY","THB","JPY"];
+  const ia=rank.indexOf(a), ib=rank.indexOf(b);
+  if(ia>=0 && ib>=0) return ia<ib ? {base:a,quote:b}:{base:b,quote:a};
+  return {base:a,quote:b};
+}
+function render(){
+  rows.innerHTML="";
+  document.getElementById("primaryHead").textContent="Market quote";
+  document.getElementById("inverseHead").textContent="Inverse";
+
+  order.filter(code=>code!==referenceCurrency).forEach(code=>{
+    const pair=orientPair(referenceCurrency,code);
+    const primary=crossRate(pair.base,pair.quote);
+    const inverse=Number.isFinite(primary)&&primary!==0 ? 1/primary : NaN;
+    const pairLabel=`${pair.base}/${pair.quote}`;
+
+    const el=document.createElement("div");
+    el.className="row";el.draggable=true;el.dataset.code=code;
+    el.innerHTML=`<div class="cell drag">≡</div>
+      <div class="cell code">${pairLabel}<span class="name">${pair.base} vs ${pair.quote}</span></div>
+      <div class="cell rate">${fmt(primary)}</div>
+      <div class="cell inv">${fmt(inverse)}</div>`;
+    el.addEventListener("dragstart",()=>{dragCode=code;el.classList.add("dragging")});
+    el.addEventListener("dragend",()=>{el.classList.remove("dragging");dragCode=null});
+    el.addEventListener("dragover",e=>e.preventDefault());
+    el.addEventListener("drop",e=>{
+      e.preventDefault();
+      if(!dragCode||dragCode===code)return;
+      const a=order.indexOf(dragCode),b=order.indexOf(code);
+      order.splice(a,1);order.splice(b,0,dragCode);
+      saveOrder();render();populateAdd()
+    });
+    el.querySelector(".drag").addEventListener("click",()=>{
+      const i=order.indexOf(code);
+      if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];saveOrder();render()}
+    });
+    rows.appendChild(el)
+  })
+}
 function populateAdd(){const s=document.getElementById("addCurrency");s.innerHTML="";Object.keys(CURRENCIES).filter(c=>!order.includes(c)).sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=`${c} — ${CURRENCIES[c]}`;s.appendChild(o)})}
 function fxMarketText(){const d=new Date(),day=d.getUTCDay();return(day===6||day===0)?"FX markets are generally closed for the weekend; quotes may remain unchanged.":"FX markets are open on normal business days; unchanged values can still occur between updates."}
 function status(text,cls,detail="",market=""){document.getElementById("source").textContent=text;document.getElementById("source").style.color=cls==="ok"?"var(--good)":cls==="warn"?"var(--warn)":"var(--bad)";document.getElementById("dot").style.background=cls==="ok"?"#22c55e":cls==="warn"?"#f59e0b":"#ef4444";document.getElementById("updated").textContent=detail;document.getElementById("marketState").textContent=market}
@@ -97,7 +175,7 @@ async function getFrankfurter(codes){
 async function refresh(){
   document.getElementById("refreshBtn").disabled=true;
   status("Refreshing…","warn","",fxMarketText());
-  const wanted=[...new Set(order)],before={...rates},fresh={},meta={};
+  const wanted=[...new Set([...order,referenceCurrency].filter(c=>c!=="USD"))],before={...rates},fresh={},meta={};
   let fallbackCount=0;
   await Promise.all(wanted.map(async code=>{try{const x=await getPrimary(code);fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),type:"live-mid"}}catch(e){}}));
   const missing=wanted.filter(c=>!fresh[c]);
@@ -114,11 +192,17 @@ async function refresh(){
   document.getElementById("refreshBtn").disabled=false;
 }
 
+baseSel.addEventListener("change",()=>{
+  referenceCurrency=baseSel.value;
+  localStorage.setItem("fx-reference",referenceCurrency);
+  render();
+  refresh().then(scheduleAutoRefresh);
+});
 decSel.addEventListener("change",()=>{localStorage.setItem("fx-decimals",decSel.value);render()});
 intervalSel.addEventListener("change",()=>{localStorage.setItem("fx-refresh-interval",intervalSel.value);scheduleAutoRefresh()});
 document.getElementById("refreshBtn").addEventListener("click",async()=>{await refresh();scheduleAutoRefresh()});
 document.getElementById("resetBtn").addEventListener("click",()=>{order=DEFAULT.slice();saveOrder();render();populateAdd()});
-document.getElementById("addBtn").addEventListener("click",()=>{const c=document.getElementById("addCurrency").value;if(c&&!order.includes(c)){order.push(c);saveOrder();render();populateAdd();refresh().then(scheduleAutoRefresh)}});
+document.getElementById("addBtn").addEventListener("click",()=>{const c=document.getElementById("addCurrency").value;if(c&&!order.includes(c)){order.push(c);saveOrder();populateBase();render();populateAdd();refresh().then(scheduleAutoRefresh)}});
 
 render();populateAdd();
 const old=localStorage.getItem("fx-updated");if(Object.keys(rates).length&&old)status("Cached — refreshing","warn",`Last fetch ${new Date(old).toLocaleString()}`,fxMarketText());
