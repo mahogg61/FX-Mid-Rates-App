@@ -1,8 +1,8 @@
-Mid FX v4.1.2
+Mid FX v4.1.4
 
 Change:
-- Fixes mobile chart scrolling so the full RSI panel is visible below the price chart.
-- Price chart, RSI calculation, line thickness and controls are unchanged.
+- Default chart period is now 1Y instead of 1D.
+- All other v4.1.3 behaviour is unchanged.
 
 GitHub update:
 Replace index.html, manifest.webmanifest and sw.js and commit.
