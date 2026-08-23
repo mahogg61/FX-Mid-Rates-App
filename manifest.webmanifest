@@ -5,5 +5,5 @@
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#111827",
-  "description": "Free, ad-free USD mid-market FX table with inverse rates."
+  "description": "Free, ad-free USD FX table with direct and inverse rates."
 }

@@ -7,310 +7,124 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>USD Mid FX</title>
 <style>
-:root{
-  --bg:#f5f7fa; --card:#ffffff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
-  --accent:#111827; --good:#166534; --warn:#92400e; --bad:#991b1b;
-}
-@media(prefers-color-scheme:dark){
-  :root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--accent:#f3f4f6;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+:root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 .wrap{max-width:760px;margin:auto;padding:14px 12px 32px}
 header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:6px 2px 14px}
-h1{font-size:23px;line-height:1.1;margin:0 0 4px}
-.sub{color:var(--muted);font-size:13px}
-button,select{font:inherit}
+h1{font-size:23px;line-height:1.1;margin:0 0 4px}.sub,.foot,small{color:var(--muted)}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:9px 11px;font-weight:650}
-.btn:active{transform:translateY(1px)}
-.controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.control{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);padding:7px 9px;border-radius:10px}
-select{border:0;background:transparent;color:var(--text);outline:0}
-.status{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.status small{color:var(--muted)}
-.dot{width:9px;height:9px;border-radius:99px;background:#9ca3af;display:inline-block;margin-right:6px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.control{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);padding:7px 9px;border-radius:10px}
+select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
+.status{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.dot{width:9px;height:9px;border-radius:99px;background:#9ca3af;display:inline-block;margin-right:6px}.badge{font-weight:700}
 .table{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .row{display:grid;grid-template-columns:34px minmax(86px,1fr) minmax(108px,1.15fr) minmax(108px,1.15fr);align-items:center;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.head{font-size:12px;color:var(--muted);font-weight:700;background:rgba(127,127,127,.05)}
-.cell{padding:11px 8px}
-.drag{font-size:18px;color:var(--muted);cursor:grab;user-select:none;text-align:center}
-.code{font-size:17px;font-weight:780;letter-spacing:.2px}
-.name{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
-.rate{font-variant-numeric:tabular-nums;text-align:right;font-size:17px;font-weight:680}
-.inv{font-variant-numeric:tabular-nums;text-align:right;font-size:17px}
-.row.dragging{opacity:.45}
-.addbox{display:flex;gap:8px;margin-top:10px}
-.addbox select{flex:1;border:1px solid var(--line);background:var(--card);padding:10px;border-radius:10px}
-.foot{color:var(--muted);font-size:12px;margin:12px 3px 0}
-.badge{font-weight:700}
-.err{color:var(--bad)} .ok{color:var(--good)} .warn{color:var(--warn)}
-@media(max-width:460px){
-  .wrap{padding-left:8px;padding-right:8px}
-  .row{grid-template-columns:28px 70px 1fr 1fr}
-  .cell{padding:10px 5px}
-  .code,.rate,.inv{font-size:15px}
-  .name{display:none}
-}
+.row:first-child{border-top:0}.head{font-size:12px;color:var(--muted);font-weight:700;background:rgba(127,127,127,.05)}
+.cell{padding:11px 8px}.drag{font-size:18px;color:var(--muted);cursor:grab;user-select:none;text-align:center}
+.code{font-size:17px;font-weight:780}.name{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.rate,.inv{font-variant-numeric:tabular-nums;text-align:right;font-size:17px}.rate{font-weight:680}.row.dragging{opacity:.45}
+.addbox{display:flex;gap:8px;margin-top:10px}.addbox select{flex:1;border:1px solid var(--line);background:var(--card);padding:10px;border-radius:10px}
+.foot{font-size:12px;margin:12px 3px 0}
+@media(max-width:460px){.wrap{padding-left:8px;padding-right:8px}.row{grid-template-columns:28px 70px 1fr 1fr}.cell{padding:10px 5px}.code,.rate,.inv{font-size:15px}.name{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div>
-      <h1>USD Mid FX</h1>
-      <div class="sub">1 USD · live mid-market · direct + inverse</div>
-    </div>
-    <button class="btn" id="refreshBtn">Refresh</button>
-  </header>
+<header><div><h1>USD Mid FX</h1><div class="sub">1 USD · direct + inverse</div></div><button class="btn" id="refreshBtn">Refresh</button></header>
 
-  <div class="controls">
-    <label class="control">Decimals
-      <select id="decimals">
-        <option>4</option><option selected>5</option><option>6</option>
-      </select>
-    </label>
-    <label class="control">Auto refresh
-      <select id="refreshInterval">
-        <option value="30">30 sec</option>
-        <option value="60" selected>1 min</option>
-        <option value="300">5 min</option>
-        <option value="0">Manual</option>
-      </select>
-    </label>
-    <button class="btn" id="resetBtn">Reset order</button>
-  </div>
+<div class="controls">
+<label class="control">Decimals <select id="decimals"><option>4</option><option selected>5</option><option>6</option></select></label>
+<label class="control">Auto refresh <select id="refreshInterval"><option value="30">30 sec</option><option value="60" selected>1 min</option><option value="300">5 min</option><option value="0">Manual</option></select></label>
+<button class="btn" id="resetBtn">Reset order</button>
+</div>
 
-  <div class="status">
-    <div><span class="dot" id="dot"></span><span class="badge" id="source">Loading…</span></div>
-    <small><span id="updated"></span><span id="countdown"></span></small>
-  </div>
+<div class="status">
+<div><div><span class="dot" id="dot"></span><span class="badge" id="source">Loading…</span></div><small id="marketState"></small></div>
+<small style="text-align:right"><div id="updated"></div><div id="countdown"></div></small>
+</div>
 
-  <div class="table" id="table">
-    <div class="row head">
-      <div class="cell"></div>
-      <div class="cell">Currency</div>
-      <div class="cell" style="text-align:right">1 USD =</div>
-      <div class="cell" style="text-align:right">1 unit = USD</div>
-    </div>
-    <div id="rows"></div>
-  </div>
+<div class="table">
+<div class="row head"><div class="cell"></div><div class="cell">Currency</div><div class="cell" style="text-align:right">1 USD =</div><div class="cell" style="text-align:right">1 unit = USD</div></div>
+<div id="rows"></div>
+</div>
 
-  <div class="addbox">
-    <select id="addCurrency"></select>
-    <button class="btn" id="addBtn">Add</button>
-  </div>
-
-  <div class="foot">
-    Drag rows to reorder. Your order, decimal setting and last successful rates are stored only on this device.
-  </div>
+<div class="addbox"><select id="addCurrency"></select><button class="btn" id="addBtn">Add</button></div>
+<div class="foot">Drag rows to reorder. On a phone, tap ≡ to move a row up. Your order, decimals and refresh interval are saved locally. Live rows use CurrencyExchangeTool, which states that it fetches mid-market rates from Yahoo Finance on each request. If that source fails, fallback rows are clearly labelled as central-bank/reference data.</div>
 </div>
 
 <script>
-const CURRENCIES = {
-  THB:"Thai baht", GBP:"British pound", EUR:"Euro", AUD:"Australian dollar",
-  SGD:"Singapore dollar", JPY:"Japanese yen", CNY:"Chinese yuan", HKD:"Hong Kong dollar",
-  CAD:"Canadian dollar", CHF:"Swiss franc", NZD:"New Zealand dollar", MYR:"Malaysian ringgit",
-  IDR:"Indonesian rupiah", PHP:"Philippine peso", INR:"Indian rupee", KRW:"South Korean won",
-  VND:"Vietnamese dong", AED:"UAE dirham", SAR:"Saudi riyal", NOK:"Norwegian krone",
-  SEK:"Swedish krona", DKK:"Danish krone", PLN:"Polish zloty", CZK:"Czech koruna",
-  HUF:"Hungarian forint", TRY:"Turkish lira", ZAR:"South African rand", MXN:"Mexican peso",
-  BRL:"Brazilian real"
-};
-const DEFAULT = ["THB","GBP","EUR","AUD","SGD","JPY","CNY","HKD","CAD","CHF"];
-let order = JSON.parse(localStorage.getItem("fx-order") || "null") || DEFAULT.slice();
-let rates = JSON.parse(localStorage.getItem("fx-rates") || "{}");
-let dragCode = null;
+const CURRENCIES={THB:"Thai baht",GBP:"British pound",EUR:"Euro",AUD:"Australian dollar",SGD:"Singapore dollar",JPY:"Japanese yen",CNY:"Chinese yuan",HKD:"Hong Kong dollar",CAD:"Canadian dollar",CHF:"Swiss franc",NZD:"New Zealand dollar",MYR:"Malaysian ringgit",IDR:"Indonesian rupiah",PHP:"Philippine peso",INR:"Indian rupee",KRW:"South Korean won",VND:"Vietnamese dong",AED:"UAE dirham",SAR:"Saudi riyal",NOK:"Norwegian krone",SEK:"Swedish krona",DKK:"Danish krone",PLN:"Polish zloty",CZK:"Czech koruna",HUF:"Hungarian forint",TRY:"Turkish lira",ZAR:"South African rand",MXN:"Mexican peso",BRL:"Brazilian real"};
+const DEFAULT=["THB","GBP","EUR","AUD","SGD","JPY","CNY","HKD","CAD","CHF"];
+let order=JSON.parse(localStorage.getItem("fx-order")||"null")||DEFAULT.slice();
+let rates=JSON.parse(localStorage.getItem("fx-rates")||"{}");
+let rateMeta=JSON.parse(localStorage.getItem("fx-rate-meta")||"{}");
+let dragCode=null, autoTimer=null, countdownTimer=null, nextRefreshAt=null;
+const rows=document.getElementById("rows");
+const decSel=document.getElementById("decimals");
+const intervalSel=document.getElementById("refreshInterval");
+decSel.value=localStorage.getItem("fx-decimals")||"5";
+intervalSel.value=localStorage.getItem("fx-refresh-interval")||"60";
 
-const rows = document.getElementById("rows");
-const decSel = document.getElementById("decimals");
-decSel.value = localStorage.getItem("fx-decimals") || "5";
-const intervalSel = document.getElementById("refreshInterval");
-intervalSel.value = localStorage.getItem("fx-refresh-interval") || "60";
-let autoTimer = null;
-let countdownTimer = null;
-let nextRefreshAt = null;
+function fmt(x){const d=+decSel.value;if(!Number.isFinite(x))return "—";if(x>=1000)return x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});if(x>=100)return x.toFixed(Math.min(d,3));if(x>=10)return x.toFixed(Math.min(d,4));return x.toFixed(d)}
+function saveOrder(){localStorage.setItem("fx-order",JSON.stringify(order))}
+function render(){rows.innerHTML="";order.forEach(code=>{const r=rates[code],el=document.createElement("div");el.className="row";el.draggable=true;el.dataset.code=code;el.innerHTML=`<div class="cell drag">≡</div><div class="cell code">${code}<span class="name">${CURRENCIES[code]||""}</span></div><div class="cell rate">${fmt(r)}</div><div class="cell inv">${fmt(r?1/r:NaN)}</div>`;el.addEventListener("dragstart",()=>{dragCode=code;el.classList.add("dragging")});el.addEventListener("dragend",()=>{el.classList.remove("dragging");dragCode=null});el.addEventListener("dragover",e=>e.preventDefault());el.addEventListener("drop",e=>{e.preventDefault();if(!dragCode||dragCode===code)return;const a=order.indexOf(dragCode),b=order.indexOf(code);order.splice(a,1);order.splice(b,0,dragCode);saveOrder();render();populateAdd()});el.querySelector(".drag").addEventListener("click",()=>{const i=order.indexOf(code);if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];saveOrder();render()}});rows.appendChild(el)})}
+function populateAdd(){const s=document.getElementById("addCurrency");s.innerHTML="";Object.keys(CURRENCIES).filter(c=>!order.includes(c)).sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=`${c} — ${CURRENCIES[c]}`;s.appendChild(o)})}
+function fxMarketText(){const d=new Date(),day=d.getUTCDay();return(day===6||day===0)?"FX markets are generally closed for the weekend; quotes may remain unchanged.":"FX markets are open on normal business days; unchanged values can still occur between updates."}
+function status(text,cls,detail="",market=""){document.getElementById("source").textContent=text;document.getElementById("source").style.color=cls==="ok"?"var(--good)":cls==="warn"?"var(--warn)":"var(--bad)";document.getElementById("dot").style.background=cls==="ok"?"#22c55e":cls==="warn"?"#f59e0b":"#ef4444";document.getElementById("updated").textContent=detail;document.getElementById("marketState").textContent=market}
+function updateCountdown(){const el=document.getElementById("countdown"),secs=Number(intervalSel.value);if(!secs||!nextRefreshAt){el.textContent=secs?"":"Manual refresh";return}const left=Math.max(0,Math.ceil((nextRefreshAt-Date.now())/1000));el.textContent=`Next in ${left}s`}
+function scheduleAutoRefresh(){if(autoTimer)clearTimeout(autoTimer);if(countdownTimer)clearInterval(countdownTimer);const secs=Number(intervalSel.value);if(!secs){nextRefreshAt=null;updateCountdown();return}nextRefreshAt=Date.now()+secs*1000;updateCountdown();countdownTimer=setInterval(updateCountdown,1000);autoTimer=setTimeout(async()=>{await refresh();scheduleAutoRefresh()},secs*1000)}
 
-function fmt(x){
-  const d = +decSel.value;
-  if(!Number.isFinite(x)) return "—";
-  if(x >= 1000) return x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  if(x >= 100) return x.toFixed(Math.min(d,3));
-  if(x >= 10) return x.toFixed(Math.min(d,4));
-  return x.toFixed(d);
-}
-function render(){
-  rows.innerHTML = "";
-  order.forEach(code=>{
-    const r = rates[code];
-    const el = document.createElement("div");
-    el.className="row"; el.draggable=true; el.dataset.code=code;
-    el.innerHTML = `
-      <div class="cell drag" title="Drag to reorder">≡</div>
-      <div class="cell code">${code}<span class="name">${CURRENCIES[code]||""}</span></div>
-      <div class="cell rate">${fmt(r)}</div>
-      <div class="cell inv">${fmt(r ? 1/r : NaN)}</div>`;
-    el.addEventListener("dragstart",()=>{dragCode=code;el.classList.add("dragging")});
-    el.addEventListener("dragend",()=>{el.classList.remove("dragging");dragCode=null});
-    el.addEventListener("dragover",e=>e.preventDefault());
-    el.addEventListener("drop",e=>{
-      e.preventDefault();
-      const target=code;
-      if(!dragCode || dragCode===target) return;
-      const a=order.indexOf(dragCode), b=order.indexOf(target);
-      order.splice(a,1); order.splice(b,0,dragCode);
-      saveOrder(); render(); populateAdd();
-    });
-    // touch-friendly move: tap-and-hold isn't reliable, so clicking ≡ moves row one step up.
-    el.querySelector(".drag").addEventListener("click",()=>{
-      const i=order.indexOf(code); if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];saveOrder();render();}
-    });
-    rows.appendChild(el);
-  });
-}
-function saveOrder(){ localStorage.setItem("fx-order",JSON.stringify(order)); }
-function populateAdd(){
-  const s=document.getElementById("addCurrency");
-  s.innerHTML="";
-  Object.keys(CURRENCIES).filter(c=>!order.includes(c)).sort().forEach(c=>{
-    const o=document.createElement("option"); o.value=c; o.textContent=`${c} — ${CURRENCIES[c]}`; s.appendChild(o);
-  });
-}
-function status(text, cls, detail=""){
-  document.getElementById("source").textContent=text;
-  document.getElementById("source").className="badge "+cls;
-  document.getElementById("dot").style.background = cls==="ok" ? "#22c55e" : cls==="warn" ? "#f59e0b" : "#ef4444";
-  document.getElementById("updated").textContent=detail;
-}
-function updateCountdown(){
-  const el=document.getElementById("countdown");
-  const secs=Number(intervalSel.value);
-  if(!secs || !nextRefreshAt){
-    el.textContent = secs ? "" : " · Manual refresh";
-    return;
-  }
-  const left=Math.max(0, Math.ceil((nextRefreshAt-Date.now())/1000));
-  el.textContent=` · Next in ${left}s`;
-}
-function scheduleAutoRefresh(){
-  if(autoTimer) clearTimeout(autoTimer);
-  if(countdownTimer) clearInterval(countdownTimer);
-  const secs=Number(intervalSel.value);
-  if(!secs){
-    nextRefreshAt=null;
-    updateCountdown();
-    return;
-  }
-  nextRefreshAt=Date.now()+secs*1000;
-  updateCountdown();
-  countdownTimer=setInterval(updateCountdown,1000);
-  autoTimer=setTimeout(async ()=>{
-    await refresh();
-    scheduleAutoRefresh();
-  },secs*1000);
-}
 async function getPrimary(code){
-  const u=`https://www.currencyexchangetool.com/api/v1/convert?amount=1&from=USD&to=${encodeURIComponent(code)}`;
-  const res=await fetch(u,{cache:"no-store"});
-  if(!res.ok) throw new Error("primary "+res.status);
+  const u=`https://www.currencyexchangetool.com/api/v1/convert?amount=1&from=USD&to=${encodeURIComponent(code)}&_=${Date.now()}`;
+  const res=await fetch(u,{cache:"no-store",headers:{"Cache-Control":"no-cache","Pragma":"no-cache"}});
+  if(!res.ok)throw new Error("primary "+res.status);
   const j=await res.json();
   const candidates=[j.rate,j.result,j.converted_amount,j.convertedAmount,j.amount,j.value,j?.data?.rate,j?.data?.mid,j?.data?.result];
   const v=candidates.map(Number).find(Number.isFinite);
-  if(!v || v<=0) throw new Error("primary parse");
-  return v;
-}
-async function getHexa(code){
-  const u=`https://hexarate.paikama.co/api/rates/USD/${encodeURIComponent(code)}/latest`;
-  const res=await fetch(u,{cache:"no-store"});
-  if(!res.ok) throw new Error("hexa "+res.status);
-  const j=await res.json();
-  const v=Number(j?.data?.mid);
-  if(!v || !Number.isFinite(v)) throw new Error("hexa parse");
-  return v;
+  if(!v||v<=0)throw new Error("primary parse");
+  return {rate:v,source:"CurrencyExchangeTool / Yahoo Finance"};
 }
 async function getFrankfurter(codes){
-  const qs=codes.join(",");
-  const u=`https://api.frankfurter.dev/v2/rates?base=USD&quotes=${encodeURIComponent(qs)}`;
+  const u=`https://api.frankfurter.dev/v2/rates?base=USD&quotes=${encodeURIComponent(codes.join(","))}`;
   const res=await fetch(u,{cache:"no-store"});
-  if(!res.ok) throw new Error("frankfurter "+res.status);
-  const j=await res.json();
-  const out={};
-  if(Array.isArray(j)){
-    j.forEach(x=>{ if(x.quote && Number.isFinite(Number(x.rate))) out[x.quote]=Number(x.rate); });
-  }
-  if(!Object.keys(out).length) throw new Error("frankfurter parse");
+  if(!res.ok)throw new Error("frankfurter "+res.status);
+  const j=await res.json(),out={};
+  if(Array.isArray(j))j.forEach(x=>{if(x.quote&&Number.isFinite(Number(x.rate)))out[x.quote]={rate:Number(x.rate),source:"Frankfurter / central-bank reference",date:x.date||null}});
+  if(!Object.keys(out).length)throw new Error("frankfurter parse");
   return out;
 }
 async function refresh(){
   document.getElementById("refreshBtn").disabled=true;
-  status("Refreshing…","warn","");
-  const wanted=[...new Set(order)];
-  let fresh={}, primaryCount=0, hexaCount=0;
-
-  await Promise.all(wanted.map(async code=>{
-    try { fresh[code]=await getPrimary(code); primaryCount++; }
-    catch(e1){
-      try { fresh[code]=await getHexa(code); hexaCount++; }
-      catch(e2){}
-    }
-  }));
-
-  let missing=wanted.filter(c=>!fresh[c]);
-  let fallbackUsed=false;
-  if(missing.length){
-    try{
-      const f=await getFrankfurter(missing);
-      Object.assign(fresh,f); fallbackUsed=Object.keys(f).length>0;
-    }catch(e){}
-  }
-
+  status("Refreshing…","warn","",fxMarketText());
+  const wanted=[...new Set(order)],before={...rates},fresh={},meta={};
+  let fallbackCount=0;
+  await Promise.all(wanted.map(async code=>{try{const x=await getPrimary(code);fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),type:"live-mid"}}catch(e){}}));
+  const missing=wanted.filter(c=>!fresh[c]);
+  if(missing.length){try{const f=await getFrankfurter(missing);Object.entries(f).forEach(([code,x])=>{fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),data_date:x.date,type:"reference"};fallbackCount++})}catch(e){}}
   if(Object.keys(fresh).length){
-    rates={...rates,...fresh};
-    localStorage.setItem("fx-rates",JSON.stringify(rates));
-    const now=new Date();
-    localStorage.setItem("fx-updated",now.toISOString());
+    rates={...rates,...fresh};rateMeta={...rateMeta,...meta};localStorage.setItem("fx-rates",JSON.stringify(rates));localStorage.setItem("fx-rate-meta",JSON.stringify(rateMeta));
+    const now=new Date();localStorage.setItem("fx-updated",now.toISOString());
+    const changed=wanted.some(c=>Number.isFinite(before[c])&&Number.isFinite(rates[c])&&before[c]!==rates[c]);
     render();
-    if(fallbackUsed){
-      status("Mid-market + reference fallback","warn",now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
-    }else{
-      status("Live mid-market","ok",now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
-    }
-  }else{
-    const old=localStorage.getItem("fx-updated");
-    status("Offline — cached rates","warn",old?new Date(old).toLocaleString():"No cached data");
+    status(fallbackCount?`Live mid + ${fallbackCount} reference fallback`:"Live mid-market",fallbackCount?"warn":"ok",`Fetched ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`,`${fxMarketText()} ${changed?"At least one rate changed on this refresh.":"Market rate unchanged since the previous refresh."}`);
+  } else {
+    const old=localStorage.getItem("fx-updated");status("Offline — cached rates","warn",old?`Last fetch ${new Date(old).toLocaleString()}`:"No cached data",fxMarketText());
   }
   document.getElementById("refreshBtn").disabled=false;
 }
 
 decSel.addEventListener("change",()=>{localStorage.setItem("fx-decimals",decSel.value);render()});
-intervalSel.addEventListener("change",()=>{
-  localStorage.setItem("fx-refresh-interval",intervalSel.value);
-  scheduleAutoRefresh();
-});
-document.getElementById("refreshBtn").addEventListener("click",async ()=>{
-  await refresh();
-  scheduleAutoRefresh();
-});
+intervalSel.addEventListener("change",()=>{localStorage.setItem("fx-refresh-interval",intervalSel.value);scheduleAutoRefresh()});
+document.getElementById("refreshBtn").addEventListener("click",async()=>{await refresh();scheduleAutoRefresh()});
 document.getElementById("resetBtn").addEventListener("click",()=>{order=DEFAULT.slice();saveOrder();render();populateAdd()});
-document.getElementById("addBtn").addEventListener("click",()=>{
-  const c=document.getElementById("addCurrency").value;
-  if(c && !order.includes(c)){order.push(c);saveOrder();render();populateAdd();refresh();}
-});
+document.getElementById("addBtn").addEventListener("click",()=>{const c=document.getElementById("addCurrency").value;if(c&&!order.includes(c)){order.push(c);saveOrder();render();populateAdd();refresh().then(scheduleAutoRefresh)}});
 
-render(); populateAdd();
-const old=localStorage.getItem("fx-updated");
-if(Object.keys(rates).length && old) status("Cached — refreshing","warn",new Date(old).toLocaleString());
+render();populateAdd();
+const old=localStorage.getItem("fx-updated");if(Object.keys(rates).length&&old)status("Cached — refreshing","warn",`Last fetch ${new Date(old).toLocaleString()}`,fxMarketText());
 refresh().then(scheduleAutoRefresh);
-
-document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible"){
-    refresh().then(scheduleAutoRefresh);
-  }
-});
-
-if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
-}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refresh().then(scheduleAutoRefresh)});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
 </html>
