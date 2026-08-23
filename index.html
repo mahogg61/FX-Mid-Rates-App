@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.1.4</title>
+<title>Mid FX v4.1.5</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -43,7 +43,8 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
   .chart-modal.open{display:block}
   .chart-wrap{padding-bottom:96px}
   #fxChart{height:300px}
-  #rsiChart{height:150px;min-height:150px}
+  .rsi-card{display:block;min-height:200px;margin-bottom:32px}
+  #rsiChart{display:block;width:100%;height:150px;min-height:150px}
 }
 .chart-wrap{max-width:760px;margin:auto;padding:14px 12px 32px}
 .chart-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -54,10 +55,11 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 .period{border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 10px;border-radius:9px;font-weight:700}
 .period.active{outline:2px solid var(--text)}
 .chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
+.rsi-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;margin-top:10px;display:block;min-height:190px}
 #fxChart{width:100%;height:300px;display:block;touch-action:none}
 .rsi-head{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 4px;font-size:12px;color:var(--muted)}
 .rsi-value{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-#rsiChart{width:100%;height:135px;display:block;touch-action:none;border-top:1px solid var(--line);margin-top:4px}
+#rsiChart{width:100%;height:150px;min-height:150px;display:block;touch-action:none}
 .chart-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
 .chart-stats{display:flex;gap:16px;flex-wrap:wrap;margin:10px 2px}
 .chart-stat span{display:block;color:var(--muted);font-size:11px}.chart-stat b{font-variant-numeric:tabular-nums}
@@ -117,16 +119,19 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
     </div>
     <div class="chart-card">
       <svg id="fxChart" viewBox="0 0 720 300" preserveAspectRatio="none"></svg>
-      <div class="rsi-head">
-        <span>RSI(14)</span>
-        <span class="rsi-value" id="rsiCurrent">—</span>
-      </div>
-      <svg id="rsiChart" viewBox="0 0 720 135" preserveAspectRatio="none"></svg>
       <div class="chart-message" id="chartMessage" style="display:none"></div>
       <div class="chart-meta">
         <span id="chartSource"></span>
         <span id="chartHover"></span>
       </div>
+    </div>
+
+    <div class="rsi-card" id="rsiCard">
+      <div class="rsi-head">
+        <span>RSI(14)</span>
+        <span class="rsi-value" id="rsiCurrent">—</span>
+      </div>
+      <svg id="rsiChart" width="720" height="150" viewBox="0 0 720 150" preserveAspectRatio="none" aria-label="RSI 14 chart"></svg>
     </div>
   </div>
 </div>
@@ -416,7 +421,7 @@ function renderRSI(){
 
   current.textContent=rsi[rsi.length-1].v.toFixed(1);
 
-  const W=720,H=135,pad={l:58,r:18,t:8,b:22};
+  const W=720,H=150,pad={l:58,r:18,t:10,b:24};
   const xmin=chartData[0].t, xmax=chartData[chartData.length-1].t;
   const X=t=>pad.l+(t-xmin)/(xmax-xmin)*(W-pad.l-pad.r);
   const Y=v=>pad.t+(100-v)/100*(H-pad.t-pad.b);
