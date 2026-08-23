@@ -1,14 +1,13 @@
-Mid FX v4.1.6
+Mid FX v4.1.7
 
-RSI rendering fix:
-- RSI is now drawn inside the SAME SVG as the working price chart.
-- This removes the second-SVG mobile rendering problem entirely.
-- Price occupies the upper section; RSI(14) occupies the lower section.
-- RSI has 70, 50 and 30 guide lines plus overbought/oversold labels.
-- Current RSI value is drawn inside the same SVG.
-- Thin 1.3 px price line retained.
+Mobile RSI visibility fix:
+- Overall combined chart height reduced from 430 px to 350 px.
+- Price section compressed slightly.
+- Full RSI(14) panel now sits inside the visible chart area.
+- RSI remains in the same SVG as the price chart.
+- 30 / 50 / 70 levels and current RSI value retained.
 - 1Y remains the default chart period.
-- Rates and calculations otherwise unchanged.
+- Thin 1.3 px price line retained.
 
 GitHub update:
 Replace index.html, manifest.webmanifest and sw.js and commit.
