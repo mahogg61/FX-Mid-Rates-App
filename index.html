@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v3.1</title>
+<title>Mid FX v4</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -27,6 +27,24 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 .addbox{display:flex;gap:8px;margin-top:10px}.addbox select{flex:1;border:1px solid var(--line);background:var(--card);padding:10px;border-radius:10px}
 .foot{font-size:12px;margin:12px 3px 0}
 @media(max-width:460px){.wrap{padding-left:8px;padding-right:8px}.row{grid-template-columns:28px 70px 1fr 1fr}.cell{padding:10px 5px}.code,.rate,.inv{font-size:15px}.name{display:none}}
+
+.chart-modal{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;overflow:auto}
+.chart-modal.open{display:block}
+.chart-wrap{max-width:760px;margin:auto;padding:14px 12px 32px}
+.chart-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.chart-title{font-size:24px;font-weight:800}
+.chart-current{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:4px}
+.chart-change{font-size:13px;color:var(--muted)}
+.periods{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.period{border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 10px;border-radius:9px;font-weight:700}
+.period.active{outline:2px solid var(--text)}
+.chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
+#fxChart{width:100%;height:340px;display:block;touch-action:none}
+.chart-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.chart-stats{display:flex;gap:16px;flex-wrap:wrap;margin:10px 2px}
+.chart-stat span{display:block;color:var(--muted);font-size:11px}.chart-stat b{font-variant-numeric:tabular-nums}
+.chart-message{padding:24px;text-align:center;color:var(--muted)}
+.row{cursor:pointer}
 </style>
 </head>
 <body>
@@ -52,6 +70,42 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 
 <div class="addbox"><select id="addCurrency"></select><button class="btn" id="addBtn">Add</button></div>
 <div class="foot">Choose a reference currency for cross-rate calculation. Pair orientation follows common market convention where defined — for example GBP/USD (“cable”), EUR/USD, AUD/USD and NZD/USD, but USD/JPY, USD/CHF, USD/CAD and USD/THB. Drag rows to reorder; on a phone, tap ≡ to move a row up. Settings are saved locally.</div>
+</div>
+
+<div class="chart-modal" id="chartModal">
+  <div class="chart-wrap">
+    <div class="chart-top">
+      <div>
+        <div class="chart-title" id="chartPair">GBP/USD</div>
+        <div class="chart-current" id="chartCurrent">—</div>
+        <div class="chart-change" id="chartChange"></div>
+      </div>
+      <button class="btn" id="chartClose">Back</button>
+    </div>
+    <div class="periods" id="periodButtons">
+      <button class="period active" data-period="1D">1D</button>
+      <button class="period" data-period="1W">1W</button>
+      <button class="period" data-period="1M">1M</button>
+      <button class="period" data-period="3M">3M</button>
+      <button class="period" data-period="1Y">1Y</button>
+      <button class="period" data-period="5Y">5Y</button>
+      <button class="period" data-period="10Y">10Y</button>
+    </div>
+    <div class="chart-stats">
+      <div class="chart-stat"><span>High</span><b id="chartHigh">—</b></div>
+      <div class="chart-stat"><span>Low</span><b id="chartLow">—</b></div>
+      <div class="chart-stat"><span>Start</span><b id="chartStart">—</b></div>
+      <div class="chart-stat"><span>Latest</span><b id="chartLatest">—</b></div>
+    </div>
+    <div class="chart-card">
+      <svg id="fxChart" viewBox="0 0 720 340" preserveAspectRatio="none"></svg>
+      <div class="chart-message" id="chartMessage" style="display:none"></div>
+      <div class="chart-meta">
+        <span id="chartSource"></span>
+        <span id="chartHover"></span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -142,6 +196,10 @@ function render(){
       <div class="cell code">${pairLabel}<span class="name">${pair.base} vs ${pair.quote}</span></div>
       <div class="cell rate">${fmt(primary)}</div>
       <div class="cell inv">${fmt(inverse)}</div>`;
+    el.addEventListener("click",e=>{
+      if(e.target.closest(".drag"))return;
+      openChart(pair,primary);
+    });
     el.addEventListener("dragstart",()=>{dragCode=code;el.classList.add("dragging")});
     el.addEventListener("dragend",()=>{el.classList.remove("dragging");dragCode=null});
     el.addEventListener("dragover",e=>e.preventDefault());
@@ -197,12 +255,193 @@ async function refresh(){
     const now=new Date();localStorage.setItem("fx-updated",now.toISOString());
     const changed=wanted.some(c=>Number.isFinite(before[c])&&Number.isFinite(rates[c])&&before[c]!==rates[c]);
     render();
+    captureVisibleIntraday();
     status(fallbackCount?`Live mid + ${fallbackCount} reference fallback`:"Live mid-market",fallbackCount?"warn":"ok",`Fetched ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`,`${fxMarketText()} ${changed?"At least one rate changed on this refresh.":"Market rate unchanged since the previous refresh."}`);
   } else {
     const old=localStorage.getItem("fx-updated");status("Offline — cached rates","warn",old?`Last fetch ${new Date(old).toLocaleString()}`:"No cached data",fxMarketText());
   }
   document.getElementById("refreshBtn").disabled=false;
 }
+
+
+let activeChartPair=null;
+let activeChartPeriod="1D";
+let chartData=[];
+const INTRADAY_KEY="fx-intraday-v4";
+
+function pairKey(base,quote){return `${base}_${quote}`}
+function loadIntraday(){
+  try{return JSON.parse(localStorage.getItem(INTRADAY_KEY)||"{}")}catch(e){return {}}
+}
+function saveIntradayPoint(base,quote,value){
+  if(!Number.isFinite(value))return;
+  const all=loadIntraday(), key=pairKey(base,quote), now=Date.now();
+  let arr=Array.isArray(all[key])?all[key]:[];
+  const last=arr[arr.length-1];
+  if(!last || now-last.t>=45000) arr.push({t:now,v:value});
+  const cutoff=now-26*60*60*1000;
+  arr=arr.filter(p=>p.t>=cutoff);
+  all[key]=arr;
+  localStorage.setItem(INTRADAY_KEY,JSON.stringify(all));
+}
+function captureVisibleIntraday(){
+  const codes=referenceCurrency==="USD"
+    ? order.filter(c=>c!==referenceCurrency)
+    : ["USD",...order.filter(c=>c!==referenceCurrency&&c!=="USD")];
+  codes.forEach(code=>{
+    const p=orientPair(referenceCurrency,code);
+    saveIntradayPoint(p.base,p.quote,crossRate(p.base,p.quote));
+  });
+}
+function daysForPeriod(p){return {"1W":7,"1M":31,"3M":93,"1Y":366,"5Y":1825}[p]||7}
+function parseHistoryPayload(j){
+  const pts=[];
+  const push=(d,v)=>{
+    const n=Number(v); if(!Number.isFinite(n))return;
+    const t=typeof d==="number" ? (d<1e12?d*1000:d) : Date.parse(d);
+    if(Number.isFinite(t))pts.push({t,v:n});
+  };
+  const candidates=[j?.rates,j?.data,j?.history,j?.results,j?.result];
+  for(const c of candidates){
+    if(Array.isArray(c)){
+      c.forEach(x=>push(x.date||x.datetime||x.timestamp||x.time, x.rate??x.value??x.close??x.mid));
+      if(pts.length)break;
+    }else if(c && typeof c==="object"){
+      Object.entries(c).forEach(([d,v])=>{
+        if(typeof v==="object"&&v!==null)push(d,v.rate??v.value??v.close??v.mid);
+        else push(d,v);
+      });
+      if(pts.length)break;
+    }
+  }
+  if(!pts.length && Array.isArray(j)){
+    j.forEach(x=>push(x.date||x.datetime||x.timestamp||x.time,x.rate??x.value??x.close??x.mid));
+  }
+  return pts.sort((a,b)=>a.t-b.t);
+}
+async function primaryHistory(base,quote,days){
+  const u=`https://www.currencyexchangetool.com/api/v1/history?from=${encodeURIComponent(base)}&to=${encodeURIComponent(quote)}&days=${days}&_=${Date.now()}`;
+  const r=await fetch(u,{cache:"no-store"});
+  if(!r.ok)throw new Error("history "+r.status);
+  return parseHistoryPayload(await r.json());
+}
+async function secondary10Y(base,quote){
+  const end=new Date(), start=new Date();
+  start.setFullYear(end.getFullYear()-10);
+  const ds=d=>d.toISOString().slice(0,10);
+  const u=`https://api.frankfurter.dev/v1/${ds(start)}..${ds(end)}?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(quote)}`;
+  const r=await fetch(u,{cache:"no-store"});
+  if(!r.ok)throw new Error("secondary "+r.status);
+  const j=await r.json(),pts=[];
+  const obj=j.rates||{};
+  Object.entries(obj).forEach(([d,row])=>{
+    const v=Number(row?.[quote]);
+    const t=Date.parse(d);
+    if(Number.isFinite(v)&&Number.isFinite(t))pts.push({t,v});
+  });
+  return pts.sort((a,b)=>a.t-b.t);
+}
+function svgEl(name,attrs={}){
+  const e=document.createElementNS("http://www.w3.org/2000/svg",name);
+  Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e;
+}
+function chartFmt(x){
+  if(!Number.isFinite(x))return "—";
+  const d=Number(decSel.value);
+  return x.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function renderChart(){
+  const svg=document.getElementById("fxChart"),msg=document.getElementById("chartMessage");
+  svg.innerHTML="";
+  if(chartData.length<2){
+    svg.style.display="none";msg.style.display="block";
+    msg.textContent=activeChartPeriod==="1D"
+      ?"1D builds from the same live mid-rate feed while this app is used. More points will appear as the app refreshes."
+      :"No historical data returned for this period.";
+    return;
+  }
+  svg.style.display="block";msg.style.display="none";
+  const W=720,H=340,pad={l:58,r:18,t:18,b:34};
+  const vals=chartData.map(p=>p.v), times=chartData.map(p=>p.t);
+  let ymin=Math.min(...vals),ymax=Math.max(...vals);
+  if(ymax===ymin){ymax+=0.0001;ymin-=0.0001}
+  const extra=(ymax-ymin)*0.08;ymin-=extra;ymax+=extra;
+  const xmin=Math.min(...times),xmax=Math.max(...times);
+  const X=t=>pad.l+(t-xmin)/(xmax-xmin)*(W-pad.l-pad.r);
+  const Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(H-pad.t-pad.b);
+
+  for(let i=0;i<5;i++){
+    const y=pad.t+i*(H-pad.t-pad.b)/4;
+    svg.appendChild(svgEl("line",{x1:pad.l,x2:W-pad.r,y1:y,y2:y,stroke:"currentColor","stroke-opacity":".12","stroke-width":"1"}));
+    const val=ymax-i*(ymax-ymin)/4;
+    const tx=svgEl("text",{x:pad.l-7,y:y+4,"text-anchor":"end",fill:"currentColor","fill-opacity":".65","font-size":"11"});
+    tx.textContent=chartFmt(val);svg.appendChild(tx);
+  }
+  const pts=chartData.map(p=>`${X(p.t)},${Y(p.v)}`).join(" ");
+  svg.appendChild(svgEl("polyline",{points:pts,fill:"none",stroke:"currentColor","stroke-width":"2.2","vector-effect":"non-scaling-stroke"}));
+
+  const cross=svgEl("line",{id:"crosshair",y1:pad.t,y2:H-pad.b,stroke:"currentColor","stroke-opacity":".35","stroke-width":"1","vector-effect":"non-scaling-stroke"});
+  cross.style.display="none";svg.appendChild(cross);
+  const dot=svgEl("circle",{id:"chartDot",r:"4",fill:"currentColor"});dot.style.display="none";svg.appendChild(dot);
+
+  function hover(clientX){
+    const rect=svg.getBoundingClientRect(), px=(clientX-rect.left)/rect.width*W;
+    let best=chartData[0],bestDx=Infinity;
+    chartData.forEach(p=>{const dx=Math.abs(X(p.t)-px);if(dx<bestDx){best=p;bestDx=dx}});
+    const xx=X(best.t),yy=Y(best.v);cross.setAttribute("x1",xx);cross.setAttribute("x2",xx);cross.style.display="";
+    dot.setAttribute("cx",xx);dot.setAttribute("cy",yy);dot.style.display="";
+    document.getElementById("chartHover").textContent=`${new Date(best.t).toLocaleString()} · ${chartFmt(best.v)}`;
+  }
+  svg.onpointermove=e=>hover(e.clientX);
+  svg.onpointerdown=e=>hover(e.clientX);
+  svg.onpointerleave=()=>{cross.style.display="none";dot.style.display="none";document.getElementById("chartHover").textContent=""};
+
+  document.getElementById("chartHigh").textContent=chartFmt(Math.max(...vals));
+  document.getElementById("chartLow").textContent=chartFmt(Math.min(...vals));
+  document.getElementById("chartStart").textContent=chartFmt(vals[0]);
+  document.getElementById("chartLatest").textContent=chartFmt(vals[vals.length-1]);
+  const ch=vals[vals.length-1]-vals[0],pct=vals[0]?ch/vals[0]*100:0;
+  document.getElementById("chartChange").textContent=`${ch>=0?"+":""}${chartFmt(ch)} · ${pct>=0?"+":""}${pct.toFixed(2)}%`;
+}
+async function loadChart(period){
+  activeChartPeriod=period;
+  document.querySelectorAll(".period").forEach(b=>b.classList.toggle("active",b.dataset.period===period));
+  document.getElementById("chartMessage").style.display="block";
+  document.getElementById("chartMessage").textContent="Loading…";
+  document.getElementById("fxChart").style.display="none";
+  const {base,quote}=activeChartPair;
+  try{
+    if(period==="1D"){
+      const all=loadIntraday(), arr=all[pairKey(base,quote)]||[];
+      chartData=arr.filter(p=>p.t>=Date.now()-24*60*60*1000);
+      document.getElementById("chartSource").textContent="Same live mid-rate feed · locally sampled";
+    }else if(period==="10Y"){
+      chartData=await secondary10Y(base,quote);
+      document.getElementById("chartSource").textContent="10Y secondary historical source · daily reference data";
+    }else{
+      chartData=await primaryHistory(base,quote,daysForPeriod(period));
+      document.getElementById("chartSource").textContent="CurrencyExchangeTool historical mid-rate feed";
+    }
+  }catch(e){
+    chartData=[];
+    document.getElementById("chartSource").textContent="Historical data unavailable";
+  }
+  renderChart();
+}
+function openChart(pair,current){
+  activeChartPair=pair;
+  document.getElementById("chartPair").textContent=`${pair.base}/${pair.quote}`;
+  document.getElementById("chartCurrent").textContent=chartFmt(current);
+  document.getElementById("chartModal").classList.add("open");
+  document.body.style.overflow="hidden";
+  loadChart(activeChartPeriod);
+}
+function closeChart(){
+  document.getElementById("chartModal").classList.remove("open");
+  document.body.style.overflow="";
+}
+document.getElementById("chartClose").addEventListener("click",closeChart);
+document.querySelectorAll(".period").forEach(b=>b.addEventListener("click",()=>loadChart(b.dataset.period)));
 
 baseSel.addEventListener("change",()=>{
   referenceCurrency=baseSel.value;
@@ -219,6 +458,7 @@ document.getElementById("addBtn").addEventListener("click",()=>{const c=document
 populateBase();
 render();
 populateAdd();
+captureVisibleIntraday();
 const old=localStorage.getItem("fx-updated");if(Object.keys(rates).length&&old)status("Cached — refreshing","warn",`Last fetch ${new Date(old).toLocaleString()}`,fxMarketText());
 refresh().then(scheduleAutoRefresh);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refresh().then(scheduleAutoRefresh)});
