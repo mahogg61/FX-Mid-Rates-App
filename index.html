@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.1.7</title>
+<title>Mid FX v4.1.8</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -238,14 +238,37 @@ function updateCountdown(){const el=document.getElementById("countdown"),secs=Nu
 function scheduleAutoRefresh(){if(autoTimer)clearTimeout(autoTimer);if(countdownTimer)clearInterval(countdownTimer);const secs=Number(intervalSel.value);if(!secs){nextRefreshAt=null;updateCountdown();return}nextRefreshAt=Date.now()+secs*1000;updateCountdown();countdownTimer=setInterval(updateCountdown,1000);autoTimer=setTimeout(async()=>{await refresh();scheduleAutoRefresh()},secs*1000)}
 
 async function getPrimary(code){
-  const u=`https://www.currencyexchangetool.com/api/v1/convert?amount=1&from=USD&to=${encodeURIComponent(code)}&_=${Date.now()}`;
-  const res=await fetch(u,{cache:"no-store",headers:{"Cache-Control":"no-cache","Pragma":"no-cache"}});
-  if(!res.ok)throw new Error("primary "+res.status);
-  const j=await res.json();
-  const candidates=[j.rate,j.result,j.converted_amount,j.convertedAmount,j.amount,j.value,j?.data?.rate,j?.data?.mid,j?.data?.result];
-  const v=candidates.map(Number).find(Number.isFinite);
-  if(!v||v<=0)throw new Error("primary parse");
-  return {rate:v,source:"CurrencyExchangeTool / Yahoo Finance"};
+  // BiQuote returns live FX bid/ask plus a calculated mid.
+  // Internally this app stores every currency as "foreign currency per 1 USD",
+  // so market-convention pairs such as GBPUSD / EURUSD are inverted here.
+  const preferred = USD_QUOTE_SECOND.has(code)
+    ? {symbol:`${code}USD`, invert:true}
+    : {symbol:`USD${code}`, invert:false};
+
+  // If a broker does not carry the preferred orientation, try the inverse.
+  const alternate = preferred.invert
+    ? {symbol:`USD${code}`, invert:false}
+    : {symbol:`${code}USD`, invert:true};
+
+  for(const spec of [preferred,alternate]){
+    try{
+      const u=`https://biquote.io/api/${encodeURIComponent(spec.symbol)}?_=${Date.now()}`;
+      const res=await fetch(u,{cache:"no-store",headers:{"Cache-Control":"no-cache","Pragma":"no-cache"}});
+      if(!res.ok)continue;
+      const j=await res.json();
+      const mid=Number(j?.mid);
+      if(!Number.isFinite(mid)||mid<=0)continue;
+      const normalized=spec.invert ? 1/mid : mid;
+      return {
+        rate:normalized,
+        source:j?.source ? `BiQuote · ${j.source}` : "BiQuote",
+        quote_at:j?.timestamp||null,
+        symbol:j?.symbol||spec.symbol,
+        raw_mid:mid
+      };
+    }catch(e){}
+  }
+  throw new Error(`No BiQuote live tick for ${code}`);
 }
 async function getFrankfurter(codes){
   const u=`https://api.frankfurter.dev/v2/rates?base=USD&quotes=${encodeURIComponent(codes.join(","))}`;
@@ -261,7 +284,7 @@ async function refresh(){
   status("Refreshing…","warn","",fxMarketText());
   const wanted=[...new Set([...order,referenceCurrency].filter(c=>c!=="USD"))],before={...rates},fresh={},meta={};
   let fallbackCount=0;
-  await Promise.all(wanted.map(async code=>{try{const x=await getPrimary(code);fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),type:"live-mid"}}catch(e){}}));
+  await Promise.all(wanted.map(async code=>{try{const x=await getPrimary(code);fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),quote_at:x.quote_at,symbol:x.symbol,raw_mid:x.raw_mid,type:"live-mid"}}catch(e){}}));
   const missing=wanted.filter(c=>!fresh[c]);
   if(missing.length){try{const f=await getFrankfurter(missing);Object.entries(f).forEach(([code,x])=>{fresh[code]=x.rate;meta[code]={source:x.source,fetched_at:new Date().toISOString(),data_date:x.date,type:"reference"};fallbackCount++})}catch(e){}}
   if(Object.keys(fresh).length){
@@ -270,7 +293,20 @@ async function refresh(){
     const changed=wanted.some(c=>Number.isFinite(before[c])&&Number.isFinite(rates[c])&&before[c]!==rates[c]);
     render();
     captureVisibleIntraday();
-    status(fallbackCount?`Live mid + ${fallbackCount} reference fallback`:"Live mid-market",fallbackCount?"warn":"ok",`Fetched ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`,`${fxMarketText()} ${changed?"At least one rate changed on this refresh.":"Market rate unchanged since the previous refresh."}`);
+    const liveQuoteTimes=Object.values(meta)
+      .filter(x=>x.type==="live-mid"&&x.quote_at)
+      .map(x=>Date.parse(x.quote_at))
+      .filter(Number.isFinite);
+    const latestQuote=liveQuoteTimes.length?new Date(Math.max(...liveQuoteTimes)):null;
+    const quoteText=latestQuote
+      ? `Quote ${latestQuote.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`
+      : `Fetched ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`;
+    status(
+      fallbackCount?`BiQuote mid + ${fallbackCount} reference fallback`:"BiQuote live mid",
+      fallbackCount?"warn":"ok",
+      quoteText,
+      `${fxMarketText()} ${changed?"At least one rate changed on this refresh.":"Market rate unchanged since the previous refresh."}`
+    );
   } else {
     const old=localStorage.getItem("fx-updated");status("Offline — cached rates","warn",old?`Last fetch ${new Date(old).toLocaleString()}`:"No cached data",fxMarketText());
   }
