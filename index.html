@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.1.8</title>
+<title>Mid FX v4.1.9</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -16,7 +16,7 @@ h1{font-size:23px;line-height:1.1;margin:0 0 4px}.sub,.foot,small{color:var(--mu
 .btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:9px 11px;font-weight:650}
 .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.control{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);padding:7px 9px;border-radius:10px}
 select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
-.status{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.status{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:7px 10px;margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
 .dot{width:9px;height:9px;border-radius:99px;background:#9ca3af;display:inline-block;margin-right:6px}.badge{font-weight:700}
 .table{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .row{display:grid;grid-template-columns:34px minmax(86px,1fr) minmax(108px,1.15fr) minmax(108px,1.15fr);align-items:center;border-top:1px solid var(--line)}
@@ -73,8 +73,8 @@ select{font:inherit;border:0;background:transparent;color:var(--text);outline:0}
 </div>
 
 <div class="status">
-<div><div><span class="dot" id="dot"></span><span class="badge" id="source">Loading…</span></div><small id="marketState"></small></div>
-<small style="text-align:right"><div id="updated"></div><div id="countdown"></div></small>
+<div><span class="dot" id="dot"></span><span class="badge" id="source">Loading…</span></div>
+<small style="text-align:right"><span id="updated"></span><span id="countdown" style="margin-left:8px"></span></small>
 </div>
 
 <div class="table">
@@ -233,7 +233,7 @@ function render(){
 }
 function populateAdd(){const s=document.getElementById("addCurrency");s.innerHTML="";Object.keys(CURRENCIES).filter(c=>!order.includes(c)).sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=`${c} — ${CURRENCIES[c]}`;s.appendChild(o)})}
 function fxMarketText(){const d=new Date(),day=d.getUTCDay();return(day===6||day===0)?"FX markets are generally closed for the weekend; quotes may remain unchanged.":"FX markets are open on normal business days; unchanged values can still occur between updates."}
-function status(text,cls,detail="",market=""){document.getElementById("source").textContent=text;document.getElementById("source").style.color=cls==="ok"?"var(--good)":cls==="warn"?"var(--warn)":"var(--bad)";document.getElementById("dot").style.background=cls==="ok"?"#22c55e":cls==="warn"?"#f59e0b":"#ef4444";document.getElementById("updated").textContent=detail;document.getElementById("marketState").textContent=market}
+function status(text,cls,detail="",market=""){document.getElementById("source").textContent=text;document.getElementById("source").style.color=cls==="ok"?"var(--good)":cls==="warn"?"var(--warn)":"var(--bad)";document.getElementById("dot").style.background=cls==="ok"?"#22c55e":cls==="warn"?"#f59e0b":"#ef4444";document.getElementById("updated").textContent=detail}
 function updateCountdown(){const el=document.getElementById("countdown"),secs=Number(intervalSel.value);if(!secs||!nextRefreshAt){el.textContent=secs?"":"Manual refresh";return}const left=Math.max(0,Math.ceil((nextRefreshAt-Date.now())/1000));el.textContent=`Next in ${left}s`}
 function scheduleAutoRefresh(){if(autoTimer)clearTimeout(autoTimer);if(countdownTimer)clearInterval(countdownTimer);const secs=Number(intervalSel.value);if(!secs){nextRefreshAt=null;updateCountdown();return}nextRefreshAt=Date.now()+secs*1000;updateCountdown();countdownTimer=setInterval(updateCountdown,1000);autoTimer=setTimeout(async()=>{await refresh();scheduleAutoRefresh()},secs*1000)}
 
