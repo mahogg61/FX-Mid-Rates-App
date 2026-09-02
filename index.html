@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.2.0</title>
+<title>Mid FX v4.2.1</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -463,7 +463,7 @@ function renderChart(){
     const tx=svgEl("text",{
       x:price.l-9,y:y+5,"text-anchor":"end",
       fill:"currentColor","fill-opacity":".82",
-      "font-size":isPhone?"15":"12",
+      "font-size":isPhone?"17":"12",
       "font-weight":isPhone?"650":"500"
     });
     tx.textContent=chartFmt(val);svg.appendChild(tx);
@@ -499,7 +499,7 @@ function renderChart(){
     const tx=svgEl("text",{
       x:rsiBox.l-8,y:y+4,"text-anchor":"end",
       fill:"currentColor","fill-opacity":".72",
-      "font-size":isPhone?"12":"10",
+      "font-size":isPhone?"14":"10",
       "font-weight":isPhone?"600":"500"
     });
     tx.textContent=String(level);svg.appendChild(tx);
@@ -550,6 +550,12 @@ function renderChart(){
   });
   rateText.style.display="none";svg.appendChild(rateText);
 
+  const dateText=svgEl("text",{
+    id:"cursorDateText","text-anchor":"end",fill:"currentColor",
+    "fill-opacity":".72","font-size":isPhone?"11":"9","font-weight":"600"
+  });
+  dateText.style.display="none";svg.appendChild(dateText);
+
   function hover(clientX){
     const rect=svg.getBoundingClientRect(), px=(clientX-rect.left)/rect.width*W;
     let best=chartData[0],bestDx=Infinity;
@@ -560,21 +566,28 @@ function renderChart(){
     dot.setAttribute("cx",xx);dot.setAttribute("cy",yy);dot.style.display="";
     cursorTick.setAttribute("y1",yy);cursorTick.setAttribute("y2",yy);cursorTick.style.display="";
 
-    const boxW=isPhone?76:66, boxH=isPhone?24:20;
+    const boxW=isPhone?88:72, boxH=isPhone?40:34;
     const boxX=price.l-boxW-7;
     const boxY=Math.max(price.t+1,Math.min(price.b-boxH-1,yy-boxH/2));
     rateBox.setAttribute("x",boxX);rateBox.setAttribute("y",boxY);
     rateBox.setAttribute("width",boxW);rateBox.setAttribute("height",boxH);rateBox.style.display="";
+    const d=new Date(best.t);
+    const dateLabel=d.toLocaleDateString([],{
+      day:"2-digit",month:"short",year:"2-digit"
+    });
     rateText.setAttribute("x",price.l-12);
-    rateText.setAttribute("y",boxY+boxH/2+(isPhone?5:4));
+    rateText.setAttribute("y",boxY+(isPhone?16:14));
     rateText.textContent=label;rateText.style.display="";
+    dateText.setAttribute("x",price.l-12);
+    dateText.setAttribute("y",boxY+boxH-(isPhone?7:6));
+    dateText.textContent=dateLabel;dateText.style.display="";
 
-    document.getElementById("chartHover").textContent=`${new Date(best.t).toLocaleString()} · ${label}`;
+    document.getElementById("chartHover").textContent=`${d.toLocaleString()} · ${label}`;
   }
 
   function clearHover(){
     cross.style.display="none";dot.style.display="none";cursorTick.style.display="none";
-    rateBox.style.display="none";rateText.style.display="none";
+    rateBox.style.display="none";rateText.style.display="none";dateText.style.display="none";
     document.getElementById("chartHover").textContent="";
   }
 
