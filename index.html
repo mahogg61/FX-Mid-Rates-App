@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.1.9</title>
+<title>Mid FX v4.2.0</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -440,8 +440,10 @@ function renderChart(){
   msg.style.display="none";
 
   const W=720,H=350;
-  const price={l:58,r:18,t:14,b:232};
-  const rsiBox={l:58,r:18,t:268,b:338};
+  const isPhone=window.matchMedia("(max-width:600px)").matches;
+  const leftPad=isPhone?82:62;
+  const price={l:leftPad,r:18,t:14,b:232};
+  const rsiBox={l:leftPad,r:18,t:268,b:338};
 
   const vals=chartData.map(p=>p.v), times=chartData.map(p=>p.t);
   let ymin=Math.min(...vals),ymax=Math.max(...vals);
@@ -458,7 +460,12 @@ function renderChart(){
     const y=price.t+i*(price.b-price.t)/4;
     svg.appendChild(svgEl("line",{x1:price.l,x2:W-price.r,y1:y,y2:y,stroke:"currentColor","stroke-opacity":".12","stroke-width":"1"}));
     const val=ymax-i*(ymax-ymin)/4;
-    const tx=svgEl("text",{x:price.l-7,y:y+4,"text-anchor":"end",fill:"currentColor","fill-opacity":".65","font-size":"11"});
+    const tx=svgEl("text",{
+      x:price.l-9,y:y+5,"text-anchor":"end",
+      fill:"currentColor","fill-opacity":".82",
+      "font-size":isPhone?"15":"12",
+      "font-weight":isPhone?"650":"500"
+    });
     tx.textContent=chartFmt(val);svg.appendChild(tx);
   }
 
@@ -489,7 +496,12 @@ function renderChart(){
       "stroke-dasharray":level===50?"3 4":"5 4",
       "vector-effect":"non-scaling-stroke"
     }));
-    const tx=svgEl("text",{x:rsiBox.l-7,y:y+4,"text-anchor":"end",fill:"currentColor","fill-opacity":".65","font-size":"10"});
+    const tx=svgEl("text",{
+      x:rsiBox.l-8,y:y+4,"text-anchor":"end",
+      fill:"currentColor","fill-opacity":".72",
+      "font-size":isPhone?"12":"10",
+      "font-weight":isPhone?"600":"500"
+    });
     tx.textContent=String(level);svg.appendChild(tx);
   });
 
@@ -507,23 +519,70 @@ function renderChart(){
     svg.appendChild(tx);
   }
 
-  // Price hover/crosshair stays in the price section only.
-  const cross=svgEl("line",{id:"crosshair",y1:price.t,y2:price.b,stroke:"currentColor","stroke-opacity":".35","stroke-width":"1","vector-effect":"non-scaling-stroke"});
+  // Price cursor with rate label at the exact line intersection.
+  const cross=svgEl("line",{
+    id:"crosshair",y1:price.t,y2:price.b,
+    stroke:"currentColor","stroke-opacity":".42","stroke-width":"1",
+    "vector-effect":"non-scaling-stroke"
+  });
   cross.style.display="none";svg.appendChild(cross);
-  const dot=svgEl("circle",{id:"chartDot",r:"4",fill:"currentColor"});dot.style.display="none";svg.appendChild(dot);
+
+  const dot=svgEl("circle",{id:"chartDot",r:isPhone?"4.5":"4",fill:"currentColor"});
+  dot.style.display="none";svg.appendChild(dot);
+
+  const cursorTick=svgEl("line",{
+    id:"cursorTick",x1:price.l-5,x2:price.l+5,
+    stroke:"currentColor","stroke-width":"1.5",
+    "vector-effect":"non-scaling-stroke"
+  });
+  cursorTick.style.display="none";svg.appendChild(cursorTick);
+
+  const rateBox=svgEl("rect",{
+    id:"cursorRateBox",rx:"4",ry:"4",
+    fill:"var(--card)",stroke:"currentColor","stroke-opacity":".35",
+    "vector-effect":"non-scaling-stroke"
+  });
+  rateBox.style.display="none";svg.appendChild(rateBox);
+
+  const rateText=svgEl("text",{
+    id:"cursorRateText","text-anchor":"end",fill:"currentColor",
+    "font-size":isPhone?"15":"12","font-weight":"700"
+  });
+  rateText.style.display="none";svg.appendChild(rateText);
 
   function hover(clientX){
     const rect=svg.getBoundingClientRect(), px=(clientX-rect.left)/rect.width*W;
     let best=chartData[0],bestDx=Infinity;
     chartData.forEach(p=>{const dx=Math.abs(X(p.t)-px);if(dx<bestDx){best=p;bestDx=dx}});
-    const xx=X(best.t),yy=Y(best.v);
+    const xx=X(best.t),yy=Y(best.v),label=chartFmt(best.v);
+
     cross.setAttribute("x1",xx);cross.setAttribute("x2",xx);cross.style.display="";
     dot.setAttribute("cx",xx);dot.setAttribute("cy",yy);dot.style.display="";
-    document.getElementById("chartHover").textContent=`${new Date(best.t).toLocaleString()} · ${chartFmt(best.v)}`;
+    cursorTick.setAttribute("y1",yy);cursorTick.setAttribute("y2",yy);cursorTick.style.display="";
+
+    const boxW=isPhone?76:66, boxH=isPhone?24:20;
+    const boxX=price.l-boxW-7;
+    const boxY=Math.max(price.t+1,Math.min(price.b-boxH-1,yy-boxH/2));
+    rateBox.setAttribute("x",boxX);rateBox.setAttribute("y",boxY);
+    rateBox.setAttribute("width",boxW);rateBox.setAttribute("height",boxH);rateBox.style.display="";
+    rateText.setAttribute("x",price.l-12);
+    rateText.setAttribute("y",boxY+boxH/2+(isPhone?5:4));
+    rateText.textContent=label;rateText.style.display="";
+
+    document.getElementById("chartHover").textContent=`${new Date(best.t).toLocaleString()} · ${label}`;
   }
+
+  function clearHover(){
+    cross.style.display="none";dot.style.display="none";cursorTick.style.display="none";
+    rateBox.style.display="none";rateText.style.display="none";
+    document.getElementById("chartHover").textContent="";
+  }
+
   svg.onpointermove=e=>hover(e.clientX);
   svg.onpointerdown=e=>hover(e.clientX);
-  svg.onpointerleave=()=>{cross.style.display="none";dot.style.display="none";document.getElementById("chartHover").textContent=""};
+  svg.onpointerleave=e=>{
+    if(window.matchMedia("(hover:hover) and (pointer:fine)").matches) clearHover();
+  };
 
   document.getElementById("chartHigh").textContent=chartFmt(Math.max(...vals));
   document.getElementById("chartLow").textContent=chartFmt(Math.min(...vals));
