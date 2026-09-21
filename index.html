@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.2.2</title>
+<title>Mid FX v4.2.3</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -343,53 +343,63 @@ function captureVisibleIntraday(){
     saveIntradayPoint(p.base,p.quote,crossRate(p.base,p.quote));
   });
 }
-function daysForPeriod(p){return {"1W":7,"1M":31,"3M":93,"1Y":366,"5Y":1825}[p]||7}
-function parseHistoryPayload(j){
-  const pts=[];
-  const push=(d,v)=>{
-    const n=Number(v); if(!Number.isFinite(n))return;
-    const t=typeof d==="number" ? (d<1e12?d*1000:d) : Date.parse(d);
-    if(Number.isFinite(t))pts.push({t,v:n});
-  };
-  const candidates=[j?.rates,j?.data,j?.history,j?.results,j?.result];
-  for(const c of candidates){
-    if(Array.isArray(c)){
-      c.forEach(x=>push(x.date||x.datetime||x.timestamp||x.time, x.rate??x.value??x.close??x.mid));
-      if(pts.length)break;
-    }else if(c && typeof c==="object"){
-      Object.entries(c).forEach(([d,v])=>{
-        if(typeof v==="object"&&v!==null)push(d,v.rate??v.value??v.close??v.mid);
-        else push(d,v);
-      });
-      if(pts.length)break;
-    }
-  }
-  if(!pts.length && Array.isArray(j)){
-    j.forEach(x=>push(x.date||x.datetime||x.timestamp||x.time,x.rate??x.value??x.close??x.mid));
-  }
-  return pts.sort((a,b)=>a.t-b.t);
+function daysForPeriod(p){return {"1D":1,"1W":7,"1M":31,"3M":93,"1Y":366,"5Y":1825,"10Y":3652}[p]||7}
+
+function chartSymbol(base,quote){
+  if(base==="USD" && USD_QUOTE_SECOND.has(quote)) return {symbol:`${quote}USD`,invert:true};
+  if(quote==="USD" && USD_QUOTE_SECOND.has(base)) return {symbol:`${base}USD`,invert:false};
+  return {symbol:`${base}${quote}`,invert:false};
 }
-async function primaryHistory(base,quote,days){
-  const u=`https://www.currencyexchangetool.com/api/v1/history?from=${encodeURIComponent(base)}&to=${encodeURIComponent(quote)}&days=${days}&_=${Date.now()}`;
-  const r=await fetch(u,{cache:"no-store"});
-  if(!r.ok)throw new Error("history "+r.status);
-  return parseHistoryPayload(await r.json());
+
+function periodConfig(period){
+  switch(period){
+    case "1D": return {interval:"5m",limit:320};
+    case "1W": return {interval:"1h",limit:220};
+    case "1M": return {interval:"4h",limit:220};
+    case "3M": return {interval:"1d",limit:120};
+    case "1Y": return {interval:"1d",limit:380};
+    case "5Y": return {interval:"1d",limit:1000};
+    case "10Y": return {interval:"1d",limit:1000};
+    default: return {interval:"1d",limit:380};
+  }
 }
-async function secondary10Y(base,quote){
-  const end=new Date(), start=new Date();
-  start.setFullYear(end.getFullYear()-10);
-  const ds=d=>d.toISOString().slice(0,10);
-  const u=`https://api.frankfurter.dev/v1/${ds(start)}..${ds(end)}?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(quote)}`;
-  const r=await fetch(u,{cache:"no-store"});
-  if(!r.ok)throw new Error("secondary "+r.status);
-  const j=await r.json(),pts=[];
-  const obj=j.rates||{};
-  Object.entries(obj).forEach(([d,row])=>{
-    const v=Number(row?.[quote]);
-    const t=Date.parse(d);
-    if(Number.isFinite(v)&&Number.isFinite(t))pts.push({t,v});
-  });
-  return pts.sort((a,b)=>a.t-b.t);
+
+async function biquoteHistory(base,quote,period){
+  const pref=chartSymbol(base,quote);
+  const tries=[pref,{symbol:`${quote}${base}`,invert:true}];
+  const cfg=periodConfig(period);
+
+  for(const spec of tries){
+    try{
+      let u=`https://biquote.io/api/${encodeURIComponent(spec.symbol)}/ohlc?interval=${cfg.interval}&limit=${cfg.limit}&_=${Date.now()}`;
+
+      if(period==="5Y" || period==="10Y"){
+        const end=new Date();
+        const startDate=new Date(end);
+        startDate.setFullYear(end.getFullYear()-(period==="10Y"?10:5));
+        u=`https://biquote.io/api/${encodeURIComponent(spec.symbol)}/ohlc?interval=1d&from=${encodeURIComponent(startDate.toISOString())}&to=${encodeURIComponent(end.toISOString())}&_=${Date.now()}`;
+      }
+
+      const r=await fetch(u,{cache:"no-store",headers:{"Cache-Control":"no-cache","Pragma":"no-cache"}});
+      if(!r.ok) continue;
+
+      const j=await r.json();
+      if(!Array.isArray(j?.bars) || !j.bars.length) continue;
+
+      let pts=j.bars.map(b=>{
+        const t=Date.parse(b.openTime);
+        const close=Number(b.close);
+        if(!Number.isFinite(t)||!Number.isFinite(close)||close<=0) return null;
+        return {t,v:spec.invert ? 1/close : close};
+      }).filter(Boolean).sort((a,b)=>a.t-b.t);
+
+      const cutoff=Date.now()-daysForPeriod(period)*86400000;
+      pts=pts.filter(p=>p.t>=cutoff);
+
+      if(pts.length) return {points:pts,symbol:j.symbol||spec.symbol,interval:j.interval||cfg.interval};
+    }catch(e){}
+  }
+  throw new Error("BiQuote historical data unavailable");
 }
 function svgEl(name,attrs={}){
   const e=document.createElementNS("http://www.w3.org/2000/svg",name);
@@ -430,9 +440,7 @@ function renderChart(){
   if(chartData.length<2){
     svg.style.display="none";
     msg.style.display="block";
-    msg.textContent=activeChartPeriod==="1D"
-      ?"1D builds from the same live mid-rate feed while this app is used. More points will appear as the app refreshes."
-      :"No historical data returned for this period.";
+    msg.textContent="No historical data returned for this period.";
     return;
   }
 
@@ -613,16 +621,10 @@ async function loadChart(period){
   document.getElementById("fxChart").style.display="none";
   const {base,quote}=activeChartPair;
   try{
-    if(period==="1D"){
-      const all=loadIntraday(), arr=all[pairKey(base,quote)]||[];
-      chartData=arr.filter(p=>p.t>=Date.now()-24*60*60*1000);
-      document.getElementById("chartSource").textContent="Same live mid-rate feed · locally sampled";
-    }else if(period==="10Y"){
-      chartData=await secondary10Y(base,quote);
-      document.getElementById("chartSource").textContent="10Y secondary historical source · daily reference data";
-    }else{
-      chartData=await primaryHistory(base,quote,daysForPeriod(period));
-      document.getElementById("chartSource").textContent="CurrencyExchangeTool historical mid-rate feed";
+    {
+      const hist=await biquoteHistory(base,quote,period);
+      chartData=hist.points;
+      document.getElementById("chartSource").textContent=`BiQuote ${hist.interval} history · ${hist.symbol}`;
     }
   }catch(e){
     chartData=[];
