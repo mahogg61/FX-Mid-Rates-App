@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Mid FX v4.2.3</title>
+<title>Mid FX v4.2.4</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#166534;--warn:#92400e;--bad:#991b1b}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#121a2b;--text:#f3f4f6;--muted:#9ca3af;--line:#263248;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}}
@@ -401,6 +401,33 @@ async function biquoteHistory(base,quote,period){
   }
   throw new Error("BiQuote historical data unavailable");
 }
+
+async function frankfurterLongHistory(base,quote,period){
+  const end=new Date();
+  const start=new Date(end);
+  const years=period==="10Y"?10:5;
+  start.setFullYear(end.getFullYear()-years);
+
+  const ds=d=>d.toISOString().slice(0,10);
+  const group=period==="10Y"?"month":"week";
+  const u=`https://api.frankfurter.dev/v2/rates?base=${encodeURIComponent(base)}&quotes=${encodeURIComponent(quote)}&from=${ds(start)}&to=${ds(end)}&group=${group}&_=${Date.now()}`;
+
+  const r=await fetch(u,{cache:"no-store"});
+  if(!r.ok) throw new Error("Frankfurter history "+r.status);
+
+  const j=await r.json();
+  if(!Array.isArray(j)) throw new Error("Frankfurter history parse");
+
+  const pts=j
+    .filter(x=>x.quote===quote && Number.isFinite(Number(x.rate)))
+    .map(x=>({t:Date.parse(x.date),v:Number(x.rate)}))
+    .filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.v))
+    .sort((a,b)=>a.t-b.t);
+
+  if(!pts.length) throw new Error("Frankfurter history empty");
+  return {points:pts,group};
+}
+
 function svgEl(name,attrs={}){
   const e=document.createElementNS("http://www.w3.org/2000/svg",name);
   Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e;
@@ -621,7 +648,11 @@ async function loadChart(period){
   document.getElementById("fxChart").style.display="none";
   const {base,quote}=activeChartPair;
   try{
-    {
+    if(period==="5Y" || period==="10Y"){
+      const hist=await frankfurterLongHistory(base,quote,period);
+      chartData=hist.points;
+      document.getElementById("chartSource").textContent=`Frankfurter ${hist.group} history · ${base}/${quote}`;
+    }else{
       const hist=await biquoteHistory(base,quote,period);
       chartData=hist.points;
       document.getElementById("chartSource").textContent=`BiQuote ${hist.interval} history · ${hist.symbol}`;
